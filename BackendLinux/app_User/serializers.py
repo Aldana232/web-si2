@@ -44,10 +44,11 @@ class GroupSerializers(ModelSerializer):
         required=False
     )
     descripcion = serializers.SerializerMethodField()
+    empresa_id = serializers.IntegerField(write_only=True, required=False)
     
     class Meta:
         model = Group
-        fields = ['id', 'nombre', 'permisos', 'descripcion']
+        fields = ['id', 'nombre', 'permisos', 'descripcion', 'empresa_id']
     
     def to_representation(self, instance):
         """Personalizar la representación para incluir descripción y mapear name -> nombre"""
@@ -73,6 +74,7 @@ class GroupSerializers(ModelSerializer):
     def create(self, validated_data):
         permissions_data = validated_data.pop('permissions', [])
         descripcion = self.initial_data.get('descripcion', '')
+        empresa_id = self.initial_data.get('empresa_id', None)
         # Soportar tanto 'nombre' como 'name' en el input
         name = self.initial_data.get('nombre', '') or self.initial_data.get('name', '')
         name = name.strip() if name else ''
@@ -88,12 +90,16 @@ class GroupSerializers(ModelSerializer):
         if permissions_data:
             group.permissions.set(permissions_data)
         
-        # Crear descripción del grupo
+        # Crear descripción del grupo con empresa
         from app_User.models import GroupDescripcion
+        from app_Empresa.models import Empresa
         try:
-            GroupDescripcion.objects.create(group=group, descripcion=descripcion)
-        except:
-            pass
+            empresa = None
+            if empresa_id:
+                empresa = Empresa.objects.get(id=empresa_id)
+            GroupDescripcion.objects.create(group=group, descripcion=descripcion, empresa=empresa)
+        except Exception as e:
+            print(f"Error creando GroupDescripcion: {e}")
         
         return group
     

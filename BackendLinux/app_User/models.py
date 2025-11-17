@@ -15,9 +15,11 @@ class Perfiluser(models.Model):
 
 
 class GroupDescripcion(models.Model):
-    """Modelo para almacenar la descripción de los grupos"""
+    """Modelo para almacenar la descripción de los grupos y asociarlos a una empresa (multitenancy)"""
     group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name='descripcion_obj')
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='grupos', null=True, blank=True)
     descripcion = models.TextField(blank=True, null=True)
     
     def __str__(self):
-        return f"{self.group.name} - {self.descripcion}"
+        empresa_name = self.empresa.razon_social if self.empresa else "Sin empresa"
+        return f"{self.group.name} - {empresa_name}"

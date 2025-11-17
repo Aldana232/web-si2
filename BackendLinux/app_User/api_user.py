@@ -31,17 +31,33 @@ class UserViewSer(viewsets.ModelViewSet):
 
 
 class GroupViewSet(viewsets.ModelViewSet):
-    queryset = Group.objects.all().order_by("id")
     serializer_class = GroupSerializers
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Retornar todos los grupos"""
-        return Group.objects.all().order_by("id")
+        """Filtrar grupos por empresa del usuario autenticado (multitenancy)"""
+        try:
+            perfil = Perfiluser.objects.get(usuario=self.request.user)
+            # Retornar solo los grupos de la empresa del usuario
+            return Group.objects.filter(
+                descripcion_obj__empresa=perfil.empresa
+            ).order_by("id")
+        except Perfiluser.DoesNotExist:
+            # Si no tiene perfil, retornar vacío
+            return Group.objects.none()
 
     def create(self, request, *args, **kwargs):
+        """Crear grupo asociado a la empresa del usuario autenticado"""
         try:
+            # Verificar que el usuario tiene perfil
+            perfil = Perfiluser.objects.get(usuario=request.user)
+            
+            # Agregar la empresa al request data
+            request.data['empresa_id'] = perfil.empresa.id
+            
             return super().create(request, *args, **kwargs)
+        except Perfiluser.DoesNotExist:
+            return Response({"error": "Usuario no tiene perfil asociado"}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

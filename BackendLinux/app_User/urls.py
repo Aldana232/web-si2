@@ -5,7 +5,7 @@ from .api_user import UserViewSer, GroupViewSet, PermissionViewSer, ContentTypeV
 
 router = routers.DefaultRouter()
 router.register(r'user', UserViewSer)
-router.register(r'group', GroupViewSet)
+router.register(r'group', GroupViewSet, basename='group')
 router.register(r'permission', PermissionViewSer)
 router.register(r'content-type', ContentTypeViewSer)
 router.register(r'admin-log', AdminLogViewSet, basename='admin-log')
