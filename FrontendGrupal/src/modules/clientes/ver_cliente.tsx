@@ -29,6 +29,9 @@ import {
 } from "./domicilios/service";
 import type { Domicilio, CreateDomicilioInput, UpdateDomicilioInput } from "./domicilios/types";
 
+import { listCredits } from "../creditos/service";
+import type { Credito } from "../creditos/types";
+
 type TabType = "info" | "documentacion" | "trabajo" | "domicilio";
 
 // Componente de notificación
@@ -134,6 +137,10 @@ const VerClientePage: React.FC = () => {
   
   // Notificaciones
   const [notification, setNotification] = useState<{type: "success" | "error", message: string} | null>(null);
+  
+  // Estados para créditos
+  const [creditos, setCreditos] = useState<Credito[]>([]);
+  const [loadingCreditos, setLoadingCreditos] = useState(false);
 
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ type, message });
@@ -163,6 +170,32 @@ const VerClientePage: React.FC = () => {
     };
 
     cargarCliente();
+  }, [id]);
+
+  // Cargar créditos del cliente
+  useEffect(() => {
+    const cargarCreditos = async () => {
+      if (!id) return;
+      try {
+        setLoadingCreditos(true);
+        const data = await listCredits();
+        console.log("📊 Todos los créditos:", data);
+        console.log("🔍 Buscando créditos para cliente_id:", parseInt(id));
+        // Filtrar solo los créditos de este cliente
+        const creditosDelCliente = data.filter((c: Credito) => {
+          console.log(`Crédito ${c.id}: cliente_id=${c.cliente_id}, match=${c.cliente_id === parseInt(id)}`);
+          return c.cliente_id === parseInt(id);
+        });
+        console.log("✅ Créditos encontrados:", creditosDelCliente);
+        setCreditos(creditosDelCliente);
+      } catch (err) {
+        console.error("❌ Error cargando créditos:", err);
+      } finally {
+        setLoadingCreditos(false);
+      }
+    };
+
+    cargarCreditos();
   }, [id]);
 
   // Cargar documentos cuando se cambia al tab de documentación
@@ -659,6 +692,31 @@ const VerClientePage: React.FC = () => {
         backPath="/app/clientes"
         actions={
           <div style={{ display: "flex", gap: "12px" }}>
+            <button
+              onClick={() => navigate('/app/creditos')}
+              style={{
+                padding: "8px 16px",
+                background: "#1e90ff",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "600",
+                transition: "all 0.3s ease",
+                boxShadow: "0 2px 8px rgba(30, 144, 255, 0.3)",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "#1873cc";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(30, 144, 255, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "#1e90ff";
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 8px rgba(30, 144, 255, 0.3)";
+              }}
+            >
+              📋 Ver Créditos
+            </button>
             <Link 
               to={`/app/clientes/${cliente.id}/editar`}
               className="ui-btn ui-btn--primary"
@@ -1441,6 +1499,122 @@ const VerClientePage: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Sección de Créditos */}
+        {creditos.length > 0 && (
+          <div style={{ marginTop: "32px" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+              📊 Historial de Créditos ({creditos.length})
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {creditos.map((credito) => {
+                // Mostrar banner para créditos en SOLICITADO (estado inicial)
+                const mostrarBanner = credito.estado === 'SOLICITADO';
+
+                return (
+                  <div key={credito.id}>
+                    {mostrarBanner && (
+                      <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                        padding: "16px",
+                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        borderRadius: "12px",
+                        marginBottom: "12px",
+                        boxShadow: "0 8px 24px rgba(102, 126, 234, 0.3)",
+                        animation: "slideDown 0.5s ease-out"
+                      }}>
+                        <div style={{ color: "#fff", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px" }}>
+                          🎉 ¡Crédito creado exitosamente!
+                        </div>
+                        <div style={{ color: "rgba(255,255,255,0.9)", fontSize: "14px" }}>
+                          Crédito #{credito.id} - Bs. {credito.monto?.toLocaleString() || '0.00'}
+                        </div>
+                        <button
+                          onClick={() => navigate(`/app/creditos/${credito.id}/workflow`)}
+                          style={{
+                            padding: "10px 16px",
+                            background: "#fff",
+                            color: "#667eea",
+                            border: "none",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            fontWeight: "600",
+                            transition: "all 0.3s ease",
+                            width: "100%",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.background = "#f0f0f0";
+                            (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+                            (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 16px rgba(0,0,0,0.2)";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.background = "#fff";
+                            (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                            (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+                          }}
+                        >
+                          ▶️ Continuar Workflow
+                        </button>
+                      </div>
+                    )}
+                    <div style={{
+                      padding: "16px",
+                      background: "#f8f9fa",
+                      borderRadius: "12px",
+                      border: "1px solid #e9ecef",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center"
+                    }}>
+                      <div>
+                        <p style={{ fontSize: "16px", fontWeight: "600", margin: "0 0 4px 0" }}>
+                          📄 Crédito #{credito.id}
+                        </p>
+                        <p style={{ fontSize: "14px", color: "var(--text-muted)", margin: "0" }}>
+                          Bs. {credito.monto?.toLocaleString() || '0.00'} • Estado: <span style={{ fontWeight: "600", color: credito.estado === 'SOLICITADO' ? '#3b82f6' : '#10b981' }}>{credito.estado}</span>
+                        </p>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          onClick={() => navigate(`/app/creditos/${credito.id}/editar`)}
+                          style={{
+                            padding: "8px 14px",
+                            background: "#f59e0b",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            transition: "all 0.3s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.background = "#d97706";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.background = "#f59e0b";
+                          }}
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          onClick={() => navigate(`/app/creditos/${credito.id}/workflow`)}
+                          className="ui-btn ui-btn--primary"
+                        >
+                          👁️ Ver Workflow
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

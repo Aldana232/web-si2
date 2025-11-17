@@ -49,6 +49,7 @@ import ConsultaEstadoPage from "./modules/creditos/consulta_estado";
 import { PagoExitoso } from "./modules/pagos/components/PagoExitoso";
 import { PagoCancelado } from "./modules/pagos/components/PagoCancelado";
 import ClienteWizard from "./modules/clientes/wizard/ClienteWizard";
+import CreditoWorkflowVisor from "./modules/creditos/components/CreditoWorkflowVisor";
 
 /* RequireRole: componente compacto para proteger rutas por rol */
 type RequireRoleProps = {
@@ -246,6 +247,7 @@ const router = createBrowserRouter([
           { path: "consulta", element: <ConsultaEstadoPage /> },
           { path: "historial-completo", element: <HistorialCompletoPage /> },
           { path: "tipos", element: <RequireRole roles={["admin","superadmin"]}><TiposCreditoPage /></RequireRole> },
+          { path: ":id/workflow", element: <CreditoWorkflowVisor /> },
         ],
       },
       { path: "pagos", element: <PagosPage /> },

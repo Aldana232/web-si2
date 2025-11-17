@@ -389,3 +389,43 @@ export async function eliminarCreditoPorCI(ci: string) {
     throw new Error("No se pudieron eliminar los créditos. El sistema no encontró registros asociados a este CI.");
   }
 }
+
+// Obtener un crédito por ID
+export async function getCreditoById(id: number) {
+  try {
+    console.log(`📤 [CREDITOS] GET ${BASE_URL}${id}/`);
+    const response = await http.get(`${BASE_URL}${id}/`);
+    console.log("✅ [CREDITOS] Crédito obtenido:", response.data);
+    return response.data;
+  } catch (error: unknown) {
+    console.error(`❌ [CREDITOS] Error obteniendo crédito ${id}:`, error);
+    throw error;
+  }
+}
+
+// Obtener estado actual del crédito (fase actual y datos recopilados)
+export async function obtenerEstadoActual(creditoId: number) {
+  try {
+    console.log(`📤 [CREDITOS] GET ${BASE_URL}${creditoId}/estado-actual/`);
+    const response = await http.get(`${BASE_URL}${creditoId}/estado-actual/`);
+    console.log("✅ [CREDITOS] Estado obtenido:", response.data);
+    return response.data;
+  } catch (error: unknown) {
+    console.error(`❌ [CREDITOS] Error obteniendo estado ${creditoId}:`, error);
+    throw error;
+  }
+}
+
+// Obtener línea de tiempo del crédito
+export async function obtenerLineaTiempo(creditoId: number) {
+  try {
+    console.log(`📤 [CREDITOS] GET ${BASE_URL}${creditoId}/linea-tiempo/`);
+    const response = await http.get(`${BASE_URL}${creditoId}/linea-tiempo/`);
+    console.log("✅ [CREDITOS] Línea de tiempo obtenida:", response.data);
+    return response.data;
+  } catch (error: unknown) {
+    console.error(`❌ [CREDITOS] Error obteniendo línea de tiempo ${creditoId}:`, error);
+    throw error;
+  }
+}
+

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCliente } from '../context/useCliente';
+import { useNavigate } from 'react-router-dom';
 import { createCredit } from '../../creditos/service';
 import type { CreateCreditoInput } from '../../creditos/types';
 import type { TipoCredito } from '../../creditos/tipos/types';
@@ -11,6 +12,7 @@ const toNumber = (value: string | number): number => {
 };
 
 const CrearCreditoStep: React.FC = () => {
+  const navigate = useNavigate();
   const { clienteId, marcarPasoCompletado, setPasoActual, clienteData, resetearFlujo } = useCliente();
   const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoCredito | null>(null);
   const [form, setForm] = useState({
@@ -86,6 +88,7 @@ const CrearCreditoStep: React.FC = () => {
       const montoPagar = Math.round((monto * (1 + (tasaAnual / 100) * (plazoMeses / 12))) * 100) / 100;
 
       // Backend asigna empresa y usuario automáticamente
+      // fase_actual se asigna automáticamente a FASE_1_SOLICITUD en el modelo
       const dataParaBackend: CreateCreditoInput = {
         Monto_Solicitado: monto,
         enum_estado: 'SOLICITADO',
@@ -98,7 +101,8 @@ const CrearCreditoStep: React.FC = () => {
         tipo_credito: tipoSeleccionado.id,
         Fecha_Aprobacion: null,
         Fecha_Desembolso: null,
-        Fecha_Finalizacion: null
+        Fecha_Finalizacion: null,
+        fase_actual: 'FASE_1_SOLICITUD'
       };
 
       console.log('📤 Creando crédito:', dataParaBackend);
@@ -113,7 +117,7 @@ const CrearCreditoStep: React.FC = () => {
       
       setTimeout(() => {
         resetearFlujo();
-        window.location.href = '/app/creditos';
+        navigate('/app/creditos', { state: { from: 'crear' } });
       }, 2000);
     } catch (err) {
       console.error('❌ Error al crear crédito:', err);

@@ -154,6 +154,78 @@ const HistorialCreditosPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Banner: Crédito recién creado */}
+      {rows.length > 0 && (
+        (() => {
+          // Obtener el crédito más reciente
+          const creditoReciente = [...rows]
+            .sort((a, b) => {
+              const fechaA = new Date(a.fecha_solicitud || a.id || 0).getTime();
+              const fechaB = new Date(b.fecha_solicitud || b.id || 0).getTime();
+              return fechaB - fechaA;
+            })
+            .slice(0, 1)[0];
+          
+          if (!creditoReciente) return null;
+          
+          // Mostrar banner si:
+          // 1. Es reciente (menos de 2 minutos), O
+          // 2. Es el primero en la lista y tiene estado SOLICITADO
+          const tiempoTranscurrido = now - new Date(creditoReciente.fecha_solicitud || 0).getTime();
+          const esReciente = tiempoTranscurrido < 120000; // Menos de 2 minutos
+          const esPrimerCreditoSolicitado = creditoReciente.estado === 'SOLICITADO' && rows.length === 1;
+          
+          if (!esReciente && !esPrimerCreditoSolicitado) return null;
+          
+          return (
+            <div style={{
+              background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              marginBottom: '24px',
+              border: '2px solid #3b82f6',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '32px', flexShrink: 0 }}>🎉</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ margin: 0, color: '#1e40af', fontWeight: '700', fontSize: '15px' }}>
+                    ¡Crédito creado exitosamente!
+                  </h3>
+                  <p style={{ margin: '4px 0 0 0', color: '#3b82f6', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Crédito #{creditoReciente.id} - {getClienteName(creditoReciente.cliente)} • ${Number(creditoReciente.monto || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })} {creditoReciente.moneda || 'USD'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate(`/app/creditos/${creditoReciente.id}/workflow`, { state: { from: 'crear' } })}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  whiteSpace: 'nowrap',
+                  fontSize: '14px',
+                  width: '100%',
+                  boxShadow: '0 2px 8px rgba(29, 78, 216, 0.4)'
+                }}
+              >
+                ▶️ Continuar Workflow
+              </button>
+            </div>
+          );
+        })()
+      )}
+
       {/* Card principal con tabla */}
       <div className="ui-card">
         <div style={{ 

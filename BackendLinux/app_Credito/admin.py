@@ -3,12 +3,14 @@ from .models import Tipo_Credito, Credito, Ganancia_Credito
 
 @admin.register(Tipo_Credito)
 class TipoCreditoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'monto_minimo', 'monto_maximo')
+    list_display = ('id', 'nombre', 'empresa', 'monto_minimo', 'monto_maximo')
+    list_filter = ('empresa',)
     search_fields = ('nombre', 'descripcion')
+    autocomplete_fields = ('empresa',)
     
     fieldsets = (
         ('Información Básica', {
-            'fields': ('nombre', 'descripcion')
+            'fields': ('nombre', 'descripcion', 'empresa')
         }),
         ('Límites de Monto', {
             'fields': ('monto_minimo', 'monto_maximo')
