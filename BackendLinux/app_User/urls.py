@@ -4,10 +4,10 @@ from .api_user import UserViewSer, GroupViewSet, PermissionViewSer, ContentTypeV
 
 
 router = routers.DefaultRouter()
-router.register(r'user', UserViewSer)
+router.register(r'user', UserViewSer, basename='user')
 router.register(r'group', GroupViewSet, basename='group')
-router.register(r'permission', PermissionViewSer)
-router.register(r'content-type', ContentTypeViewSer)
+router.register(r'permission', PermissionViewSer, basename='permission')
+router.register(r'content-type', ContentTypeViewSer, basename='content-type')
 router.register(r'admin-log', AdminLogViewSet, basename='admin-log')
 
 urlpatterns = [

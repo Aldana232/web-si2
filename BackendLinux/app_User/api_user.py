@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError
 from app_User.models import Perfiluser
 from app_Empresa.models import Empresa
 
@@ -25,9 +26,28 @@ except Exception:
 
 
 class UserViewSer(viewsets.ModelViewSet):
-    queryset = User.objects.all()
     serializer_class = UserSerializers
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Filtrar usuarios por empresa del usuario autenticado (multitenancy)"""
+        try:
+            perfil = Perfiluser.objects.get(usuario=self.request.user)
+            # Retornar solo los usuarios de la empresa del usuario
+            return User.objects.filter(
+                perfiluser__empresa=perfil.empresa
+            ).order_by("id")
+        except Perfiluser.DoesNotExist:
+            # Si no tiene perfil, retornar vacío
+            return User.objects.none()
+
+    def perform_create(self, serializer):
+        """Auto-asignar la empresa al crear usuario"""
+        try:
+            perfil = Perfiluser.objects.get(usuario=self.request.user)
+            serializer.save(empresa=perfil.empresa)
+        except Perfiluser.DoesNotExist:
+            raise ValidationError("Usuario no tiene perfil asociado")
 
 
 class GroupViewSet(viewsets.ModelViewSet):
@@ -64,12 +84,12 @@ class GroupViewSet(viewsets.ModelViewSet):
 class PermissionViewSer(viewsets.ModelViewSet):
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializers
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
 class ContentTypeViewSer(viewsets.ModelViewSet):
     queryset = ContentType.objects.all()
     serializer_class = ContentTypeSerializers
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class AdminLogViewSet(viewsets.ReadOnlyModelViewSet):

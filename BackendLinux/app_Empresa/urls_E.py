@@ -5,9 +5,9 @@ from app_Empresa.api_E import EmpresaViewSet, SuscripcionViewSet, RegisterView, 
  
 router = routers.DefaultRouter()
 router.register(r'empresa', EmpresaViewSet)
-router.register(r'suscripcion', SuscripcionViewSet)
-router.register(r'on-premise', OnPremiseViewSet)
-router.register(r'configuracion', ConfiguracionViewSet)
+router.register(r'suscripcion', SuscripcionViewSet, basename='suscripcion')
+router.register(r'on-premise', OnPremiseViewSet, basename='on-premise')
+router.register(r'configuracion', ConfiguracionViewSet, basename='configuracion')
 
 urlpatterns = [
     path('', include(router.urls)),

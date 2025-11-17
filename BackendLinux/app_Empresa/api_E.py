@@ -4,11 +4,28 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from app_Empresa.models import Empresa, Suscripcion , on_premise , Configuracion
+from app_User.models import Perfiluser
 
 class ConfiguracionViewSet(viewsets.ModelViewSet):
-    queryset = Configuracion.objects.all()
     serializer_class = ConfiguracionSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Filtrar configuraciones por empresa del usuario"""
+        user = self.request.user
+        try:
+            perfil = Perfiluser.objects.get(usuario=user)
+            return Configuracion.objects.filter(empresa=perfil.empresa)
+        except Perfiluser.DoesNotExist:
+            return Configuracion.objects.none()
+    
+    def perform_create(self, serializer):
+        """Auto-asignar empresa al crear configuración"""
+        try:
+            perfil = Perfiluser.objects.get(usuario=self.request.user)
+            serializer.save(empresa=perfil.empresa)
+        except Perfiluser.DoesNotExist:
+            pass
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = Empresa.objects.all()
@@ -18,13 +35,29 @@ class EmpresaViewSet(viewsets.ModelViewSet):
 class OnPremiseViewSet(viewsets.ModelViewSet):
     queryset = on_premise.objects.all()
     serializer_class = OnPremiseSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class SuscripcionViewSet(viewsets.ModelViewSet):
-    queryset = Suscripcion.objects.all()
     serializer_class = SuscripcionSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Filtrar suscripciones por empresa del usuario"""
+        user = self.request.user
+        try:
+            perfil = Perfiluser.objects.get(usuario=user)
+            return Suscripcion.objects.filter(empresa=perfil.empresa)
+        except Perfiluser.DoesNotExist:
+            return Suscripcion.objects.none()
+    
+    def perform_create(self, serializer):
+        """Auto-asignar empresa al crear suscripción"""
+        try:
+            perfil = Perfiluser.objects.get(usuario=self.request.user)
+            serializer.save(empresa=perfil.empresa)
+        except Perfiluser.DoesNotExist:
+            pass
 
 
 class RegisterView(APIView):
