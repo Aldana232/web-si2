@@ -4,13 +4,14 @@ export interface RegistrationForm {
   razon_social: string;
   email_contacto: string;
   nombre_comercial: string;
-  imagen_url_empresa?: string;
+  // NOTA: Ya no se usan URLs directas, se envían archivos
+  // imagen_url_empresa?: string;
   username: string;
   password: string;
   first_name: string;
   last_name: string;
   email: string;
-  imagen_url_perfil?: string;
+  // imagen_url_perfil?: string;
   
   // Campos auxiliares UI
   confirm_password: string;

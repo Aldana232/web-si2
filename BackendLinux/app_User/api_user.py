@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry
 from .serializers import (
     UserSerializers , GroupSerializers , PermissionSerializers , ContentTypeSerializers,
-    AdminLogSerializer,
+    AdminLogSerializer, PerfilUserSerializer
 )
 from rest_framework import viewsets , permissions, status
 from rest_framework.response import Response
@@ -13,6 +13,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
 from app_User.models import Perfiluser
 from app_Empresa.models import Empresa
+from .models import Perfiluser
 
 
 # drf-spectacular is optional; if not installed, provide a no-op decorator.
@@ -183,3 +184,28 @@ class CreateUserView(APIView):
         except Exception as e:
             return Response({'error': f'Error al crear usuario: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class PerfilUserViewSet(viewsets.ModelViewSet):
+    queryset = Perfiluser.objects.all()
+    serializer_class = PerfilUserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
+    
+    def update(self, request, *args, **kwargs):
+        """Override update para manejar subida de avatar a S3"""
+        from app_Empresa.s3_utils import upload_user_avatar
+        
+        instance = self.get_object()
+        
+        # Si viene una imagen de perfil, subirla a S3
+        imagen_perfil_file = request.FILES.get('imagen_perfil', None) or request.FILES.get('imagen_url', None)
+        if imagen_perfil_file:
+            print(f"🖼️ [PerfilUserViewSet] Subiendo avatar: {imagen_perfil_file.name}")
+            avatar_url = upload_user_avatar(imagen_perfil_file)
+            if avatar_url:
+                print(f"✅ [PerfilUserViewSet] Avatar subido: {avatar_url}")
+                # Actualizar el campo directamente en la instancia
+                instance.imagen_url = avatar_url
+                instance.save()
+                print(f"💾 [PerfilUserViewSet] Avatar guardado en BD: {avatar_url}")
+        
+        return super().update(request, *args, **kwargs)

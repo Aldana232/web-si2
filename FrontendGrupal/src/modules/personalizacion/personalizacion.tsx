@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/service";
 import {
   obtenerConfiguracionPorEmpresa,
@@ -6,6 +7,12 @@ import {
   actualizarConfiguracionParcial,
   aplicarConfiguracion,
 } from "./service";
+import {
+  getPerfilUserByUsuarioId,
+  getEmpresaById,
+  updatePerfilUserAvatar,
+  updateEmpresaLogo,
+} from "../empresa/service";
 import type { Configuracion, ConfiguracionUpdate } from "./types";
 import { FUENTES_DISPONIBLES } from "./types";
 import PageHeader from "../../shared/components/PageHeader";
@@ -26,6 +33,7 @@ const COLORES_DISPONIBLES = [
 
 const PersonalizacionPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [config, setConfig] = useState<Configuracion | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,6 +42,13 @@ const PersonalizacionPage: React.FC = () => {
   const [color, setColor] = useState("#3b82f6");
   const [tipoLetra, setTipoLetra] = useState("Arial");
   const [tema, setTema] = useState<"CLARO" | "OSCURO">("CLARO");
+
+  // Estados para las fotos
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string>("");
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string>("");
+  const [perfilId, setPerfilId] = useState<number | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Aplicar vista previa en tiempo real cuando cambian los valores
   useEffect(() => {
@@ -186,6 +201,39 @@ const PersonalizacionPage: React.FC = () => {
           {mensaje.texto}
         </div>
       )}
+
+      {/* Botón para cambiar fotos */}
+      <div className="card" style={{ padding: "1.5rem", marginBottom: "1.5rem", backgroundColor: "#f9fafb" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.25rem" }}>
+              Fotos de Perfil y Empresa
+            </h3>
+            <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7280" }}>
+              Cambia tu foto de perfil y el logo de tu empresa
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/app/personalizacion/fotos")}
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: 600,
+              cursor: "pointer",
+              fontSize: "0.875rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <span>📸</span>
+            Cambiar Fotos
+          </button>
+        </div>
+      </div>
 
       <div className="card" style={{ padding: "2rem" }}>
         <div style={{ display: "grid", gap: "2rem" }}>

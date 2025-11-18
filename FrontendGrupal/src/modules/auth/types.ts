@@ -130,7 +130,7 @@ export type AuthCtx = {
     last_name: string;
     email: string;
     imagen_url_perfil: string;
-  }) => Promise<AuthResponse & { empresa_id?: number }>;
+  } | FormData) => Promise<AuthResponse & { empresa_id?: number }>;
   logout: () => Promise<void>;
   
   // Helper para verificar permisos multiempresa

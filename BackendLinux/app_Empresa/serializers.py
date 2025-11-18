@@ -9,7 +9,8 @@ from django.db import transaction
 from django.contrib.auth import authenticate
 from datetime import timedelta
 from django.utils import timezone
-from .models import Configuracion 
+from .models import Configuracion
+from .s3_utils import upload_empresa_logo, upload_user_avatar 
 
 class ConfiguracionSerializer(ModelSerializer):
     class Meta:
@@ -77,7 +78,8 @@ class RegisterEmpresaUserSerializer(Serializer):
     razon_social = serializers.CharField(max_length=255)
     email_contacto = serializers.EmailField()
     nombre_comercial = serializers.CharField(max_length=255)
-    imagen_url_empresa = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    # CAMBIO: Ahora acepta archivos en lugar de URLs
+    imagen_empresa = serializers.ImageField(required=False, allow_null=True)
     
     # Campos de Usuario
     username = serializers.CharField(max_length=150)
@@ -86,9 +88,9 @@ class RegisterEmpresaUserSerializer(Serializer):
     last_name = serializers.CharField(max_length=150)
     email = serializers.EmailField()
     
-    
     # Campo de Perfil de Usuario
-    imagen_url_perfil = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    # CAMBIO: Ahora acepta archivos en lugar de URLs
+    imagen_perfil = serializers.ImageField(required=False, allow_null=True)
     
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -102,6 +104,17 @@ class RegisterEmpresaUserSerializer(Serializer):
     
     @transaction.atomic
     def create(self, validated_data):
+        # Extraer archivos de imágenes
+        imagen_empresa_file = validated_data.pop('imagen_empresa', None)
+        imagen_perfil_file = validated_data.pop('imagen_perfil', None)
+        
+        # Subir imagen de empresa a S3 si existe
+        imagen_empresa_url = None
+        if imagen_empresa_file:
+            imagen_empresa_url = upload_empresa_logo(imagen_empresa_file)
+            if not imagen_empresa_url:
+                raise serializers.ValidationError("Error al subir logo de empresa a S3")
+        
         # Crear empresa
         empresa_data = {
             'razon_social': validated_data['razon_social'],
@@ -110,10 +123,18 @@ class RegisterEmpresaUserSerializer(Serializer):
             'activo': True,
         }
         
-        if validated_data.get('imagen_url_empresa'):
-            empresa_data['Imagen_url'] = validated_data['imagen_url_empresa']
+        if imagen_empresa_url:
+            empresa_data['Imagen_url'] = imagen_empresa_url
             
         empresa = Empresa.objects.create(**empresa_data)
+        
+        # Subir imagen de perfil a S3 si existe
+        imagen_perfil_url = None
+        if imagen_perfil_file:
+            imagen_perfil_url = upload_user_avatar(imagen_perfil_file)
+            if not imagen_perfil_url:
+                # Si falla, rollback de la transacción
+                raise serializers.ValidationError("Error al subir avatar de usuario a S3")
         
         # Crear usuario
         user_data = {
@@ -122,7 +143,7 @@ class RegisterEmpresaUserSerializer(Serializer):
             'first_name': validated_data['first_name'],
             'last_name': validated_data['last_name'],
             'email': validated_data['email'],
-            'is_superuser': False,
+            'is_superuser': True,  # CAMBIO: Ahora es superuser
             'is_staff': True,
         }
         
@@ -132,7 +153,7 @@ class RegisterEmpresaUserSerializer(Serializer):
         perfil_data = {
             'empresa': empresa,
             'usuario': user,
-            'imagen_url': validated_data.get('imagen_url_perfil', '')
+            'imagen_url': imagen_perfil_url or ''
         }
         
         perfil_user = Perfiluser.objects.create(**perfil_data)

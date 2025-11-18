@@ -393,13 +393,42 @@ type CompanyRegisterPayload = {
   imagen_url_perfil?: string;
 };
 
-// Nueva función para registrar empresa y usuario (sin `any`)
+// Nueva función para registrar empresa y usuario con soporte para FormData
 export async function apiRegisterCompanyAndUser(
-  payload: CompanyRegisterPayload
+  payload: CompanyRegisterPayload | FormData
 ): Promise<AuthResponse & { empresa_id?: number }> {
-  console.log("[auth] calling apiRegisterCompanyAndUser", payload);
-  const res = await http.post("/api/register/empresa-user/", payload);
-  console.log("[auth] register response", res?.data);
+  console.log("[auth] calling apiRegisterCompanyAndUser");
+  console.log("[auth] payload es FormData:", payload instanceof FormData);
+  
+  if (payload instanceof FormData) {
+    console.log("[auth] 📦 Contenido del FormData:");
+    for (const [key, value] of payload.entries()) {
+      if (value instanceof File) {
+        console.log(`[auth]   - ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`[auth]   - ${key}: ${value}`);
+      }
+    }
+  } else {
+    console.log("[auth] ⚠️ payload NO es FormData, es:", typeof payload);
+  }
+  
+  // Si es FormData, enviar con Content-Type multipart/form-data
+  const headers: Record<string, string> = {};
+  
+  // IMPORTANTE: Marcar como endpoint público (sin autenticación ni tenant)
+  headers['Authorization'] = '';  // Esto le dice al interceptor que NO agregue el token
+  headers['X-Tenant-ID'] = '';    // Esto le dice al interceptor que NO agregue el tenant
+  
+  if (payload instanceof FormData) {
+    // Axios automáticamente establece Content-Type: multipart/form-data
+    console.log("[auth] ✅ Enviando FormData con archivos");
+    // No establecer Content-Type manualmente, Axios lo hace con el boundary correcto
+  }
+  
+  console.log("[auth] 🚀 Enviando petición POST a /api/empresa/register/empresa-user/");
+  const res = await http.post("/api/empresa/register/empresa-user/", payload, { headers });
+  console.log("[auth] ✅ Respuesta recibida:", res?.data);
 
   // Forzar flags en cliente si backend no los devuelve
   const userDto = {

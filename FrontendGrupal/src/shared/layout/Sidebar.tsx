@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../modules/auth/service";
 import { getMenuForUser, type MenuItem } from "./menuData";
+import { getPerfilUserByUsuarioId } from "../../modules/empresa/service";
 import "./sidebar.css";
 
 export type SidebarProps = {
@@ -19,6 +20,9 @@ const Sidebar: React.FC<SidebarProps> = ({ brand = "Mi Empresa", collapseOnNavig
 
   // Detectar si es móvil
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 1024);
+  
+  // Estado para la foto de perfil del usuario
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string>("");
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     // En móvil, empezar colapsado por defecto
@@ -54,6 +58,22 @@ const Sidebar: React.FC<SidebarProps> = ({ brand = "Mi Empresa", collapseOnNavig
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [collapsed]);
+
+  // Cargar foto de perfil del usuario desde la API
+  useEffect(() => {
+    if (user?.id) {
+      getPerfilUserByUsuarioId(user.id)
+        .then((perfil) => {
+          if (perfil && perfil.imagen_url) {
+            console.log("[Sidebar] Foto de perfil cargada:", perfil.imagen_url);
+            setUserAvatarUrl(perfil.imagen_url);
+          }
+        })
+        .catch((err) => {
+          console.error("[Sidebar] Error al cargar foto de perfil:", err);
+        });
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     try {
@@ -181,13 +201,14 @@ const Sidebar: React.FC<SidebarProps> = ({ brand = "Mi Empresa", collapseOnNavig
     );
   };
 
-  const avatarUrl =
-    ((user as unknown) as Record<string, unknown>)["imagen_url_perfil"] ??
-    ((user as unknown) as Record<string, unknown>)["imagen_url"] ??
-    undefined;
+  // Usar la foto de perfil cargada desde la API, o fallback a la anterior
+  const avatarUrl = userAvatarUrl || 
+    (((user as unknown) as Record<string, unknown>)["imagen_url_perfil"] ?? 
+    ((user as unknown) as Record<string, unknown>)["imagen_url"] ?? 
+    undefined);
 
   const menuItems = getMenuForUser(user ?? null);
-  const userName = user?.nombre_completo ?? user?.username ?? "Usuario";
+  const userName = (user?.nombre_completo ?? user?.username) ?? "Usuario";
   const companyName = user?.empresa_nombre ?? brand;
 
   return (
@@ -198,7 +219,16 @@ const Sidebar: React.FC<SidebarProps> = ({ brand = "Mi Empresa", collapseOnNavig
           <div className="user-avatar-container">
             <div className="user-avatar-glow">
               {typeof avatarUrl === "string" && avatarUrl ? (
-                <img src={avatarUrl as string} alt="Avatar" className="user-avatar" />
+                <img 
+                  src={avatarUrl as string} 
+                  alt="Avatar" 
+                  className="user-avatar"
+                  onError={(e) => {
+                    console.error("[Sidebar] Error al cargar imagen:", avatarUrl);
+                    // Fallback a avatar generado
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=3b82f6&color=fff&size=96`;
+                  }}
+                />
               ) : user?.email ? (
                 <img
                   src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=3b82f6&color=fff&size=96`}

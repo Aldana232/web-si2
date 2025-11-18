@@ -36,6 +36,7 @@ import HistorialAuditoriaPage from "./modules/auditoria/historial";
 import ReportesPage from "./modules/reportes/reportes";
 import HistorialActividadesPage from "./modules/actividades";
 import PersonalizacionPage from "./modules/personalizacion/personalizacion";
+import CambiarFotosPage from "./modules/personalizacion/cambiar_fotos";
 import BackupPage from "./modules/backup/backup";
 import DashboardIngresos from "./modules/ingresos/dashboard";
 import { Link } from "react-router-dom";
@@ -236,6 +237,7 @@ const router = createBrowserRouter([
       { path: "auditoria", element: <HistorialAuditoriaPage /> },
       { path: "reportes", element: <ReportesPage /> },
       { path: "personalizacion", element: <PersonalizacionPage /> },
+      { path: "personalizacion/fotos", element: <CambiarFotosPage /> },
       { path: "ingresos", element: <DashboardIngresos /> },
       { path: "backup", element: <BackupPage /> },
       {

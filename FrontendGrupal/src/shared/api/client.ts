@@ -141,7 +141,8 @@ export const http = axios.create({
   baseURL: "", // <- ruta relativa: Vite proxy reenviará /api -> backend
   timeout: 30000,
   headers: {
-    "Content-Type": "application/json",
+    // NO establecer Content-Type aquí - dejar que Axios lo detecte automáticamente
+    // (para FormData, Axios establece multipart/form-data con boundary correcto)
   },
   withCredentials: false,
 });
@@ -160,6 +161,8 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
   console.log(`[HTTP Request] ${config.method?.toUpperCase()} ${config.url}`);
   console.log("[HTTP Request] Is public endpoint:", isPublicEndpoint);
+  console.log("[HTTP Request] Content-Type:", headers.get("Content-Type"));
+  console.log("[HTTP Request] Data type:", config.data?.constructor?.name);
 
   if (!isPublicEndpoint) {
     // 1) Authorization
@@ -187,6 +190,14 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
   if (import.meta.env.DEV) {
     console.log(`[API] ${config.method?.toUpperCase()} ${config.baseURL || ""}${config.url}`);
+  }
+
+  // IMPORTANTE: Si es FormData, NO tocar Content-Type
+  // Axios automáticamente establece multipart/form-data con boundary correcto
+  if (config.data instanceof FormData) {
+    console.log("[HTTP Request] 📦 FormData detectado - dejando que Axios maneje Content-Type");
+    // Eliminar Content-Type si fue establecido, para que Axios lo regenere
+    headers.delete("Content-Type");
   }
 
   config.headers = headers;

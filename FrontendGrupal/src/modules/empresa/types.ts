@@ -5,7 +5,8 @@ export interface Empresa {
   email_contacto?: string;
   fecha_registro?: string; // ISO
   activo?: boolean;
-  imagen_url?: string;
+  Imagen_url?: string | null; // Backend usa Imagen_url con mayúscula
+  imagen_url?: string | null; // Alternativa en minúscula
 }
 
 // Tipo local para suscripciones (puedes extender según respuesta del backend)

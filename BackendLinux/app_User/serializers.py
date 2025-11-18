@@ -2,6 +2,7 @@ from rest_framework.serializers import ModelSerializer
 from rest_framework import serializers
 from django.contrib.auth.models import User  , Group , Permission 
 from django.contrib.contenttypes.models import ContentType
+from .models import Perfiluser
 
 class UserSerializers(ModelSerializer): 
     password = serializers.CharField(write_only=True, required=False)
@@ -163,3 +164,8 @@ class AdminLogSerializer(serializers.Serializer):
             3: 'Eliminación',
         }
         return mapping.get(getattr(obj, 'action_flag', None), getattr(obj, 'action_flag', None))
+    
+class PerfilUserSerializer(ModelSerializer):
+    class Meta:
+        model = Perfiluser
+        fields = '__all__'

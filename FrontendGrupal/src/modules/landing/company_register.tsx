@@ -157,6 +157,9 @@ interface BackendRegisterRaw {
 }
 
 /** Helper de subida: si existe window.uploadFile la usa; si no, simula una URL */
+// NOTA: Esta función ya no se usa, las imágenes se suben directamente desde el backend
+// Se mantiene por compatibilidad pero puede ser eliminada
+/*
 async function uploadImage(file: File): Promise<string> {
   if (typeof window.uploadFile === "function") {
     return await window.uploadFile(file);
@@ -164,6 +167,7 @@ async function uploadImage(file: File): Promise<string> {
   // simulación simple (no bloqueante)
   return Promise.resolve(`https://cdn.example.com/uploads/${encodeURIComponent(file.name)}`);
 }
+*/
 
 const CompanyRegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -184,14 +188,12 @@ const CompanyRegisterPage: React.FC = () => {
     razon_social: "",
     email_contacto: "",
     nombre_comercial: "",
-    imagen_url_empresa: "",
     username: "",
     password: "",
     confirm_password: "",
     first_name: "",
     last_name: "",
     email: "",
-    imagen_url_perfil: "",
     selected_plan: "basico",
   });
 
@@ -199,10 +201,10 @@ const CompanyRegisterPage: React.FC = () => {
   const [selectedPlanId, setSelectedPlanId] = useState<string>(form.selected_plan || "basico");
 
   const [companyLogoFile, setCompanyLogoFile] = useState<File | null>(null);
-  const [companyLogoPreview, setCompanyLogoPreview] = useState<string | null>(form.imagen_url_empresa || null);
+  const [companyLogoPreview, setCompanyLogoPreview] = useState<string | null>(null);
 
   const [userAvatarFile, setUserAvatarFile] = useState<File | null>(null);
-  const [userAvatarPreview, setUserAvatarPreview] = useState<string | null>(form.imagen_url_perfil || null);
+  const [userAvatarPreview, setUserAvatarPreview] = useState<string | null>(null);
 
   // Modal de confirmación
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -262,18 +264,8 @@ const CompanyRegisterPage: React.FC = () => {
       setMessage({ text: "", type: "" });
     }
 
-    if (name === "email" && !form.username) {
-      const usernameFromEmail = value.split("@")[0] || "";
-      setForm(prev => ({ ...prev, username: usernameFromEmail }));
-    }
-
-    if (name === "nombre_comercial" && !form.razon_social) {
-      setForm(prev => ({ ...prev, razon_social: value }));
-    }
-
-    if (name === "email" && !form.email_contacto) {
-      setForm(prev => ({ ...prev, email_contacto: value }));
-    }
+    // NO autocompletar username ni email_contacto
+    // El usuario debe llenar estos campos manualmente
   };
 
   const validateForm = (): string | null => {
@@ -311,40 +303,22 @@ const CompanyRegisterPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // 2. Subir imágenes (opcional, puede hacerse después)
-      let uploadedCompanyLogo = form.imagen_url_empresa || "";
-      let uploadedUserAvatar = form.imagen_url_perfil || "";
-
-      if (companyLogoFile) {
-        try {
-          uploadedCompanyLogo = await uploadImage(companyLogoFile);
-          console.log("[preparación] Logo empresa subido:", uploadedCompanyLogo);
-        } catch (err) {
-          console.warn("No se pudo subir logo de empresa:", err);
-        }
-      }
-
-      if (userAvatarFile) {
-        try {
-          uploadedUserAvatar = await uploadImage(userAvatarFile);
-          console.log("[preparación] Avatar usuario subido:", uploadedUserAvatar);
-        } catch (err) {
-          console.warn("No se pudo subir avatar de usuario:", err);
-        }
-      }
+      // 2. Ya no subimos imágenes aquí, las guardamos para el modal
+      console.log("[preparación] Archivos listos:", {
+        companyLogo: companyLogoFile?.name,
+        userAvatar: userAvatarFile?.name
+      });
 
       // 3. Preparar datos para el modal (SIN crear empresa)
       const registrationData = {
         razon_social: form.razon_social,
         email_contacto: form.email_contacto,
         nombre_comercial: form.nombre_comercial,
-        imagen_url_empresa: uploadedCompanyLogo,
         username: form.username,
         password: form.password,
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
-        imagen_url_perfil: uploadedUserAvatar,
         selected_plan: selectedPlanId || form.selected_plan,
       };
 
@@ -376,26 +350,50 @@ const CompanyRegisterPage: React.FC = () => {
     try {
       console.log("[confirmación] INICIANDO creación de empresa desde modal");
       
-      // 1. Preparar payload para el backend
-      const payload = {
-        razon_social: String(preparedRegistrationData.razon_social || ""),
-        email_contacto: String(preparedRegistrationData.email_contacto || ""),
-        nombre_comercial: String(preparedRegistrationData.nombre_comercial || ""),
-        imagen_url_empresa: String(preparedRegistrationData.imagen_url_empresa || ""),
-        username: String(preparedRegistrationData.username || ""),
-        password: String(preparedRegistrationData.password || ""),
-        first_name: String(preparedRegistrationData.first_name || ""),
-        last_name: String(preparedRegistrationData.last_name || ""),
-        email: String(preparedRegistrationData.email || ""),
-        imagen_url_perfil: String(preparedRegistrationData.imagen_url_perfil || ""),
-      };
+      // VERIFICAR archivos antes de crear FormData
+      console.log("[confirmación] 🔍 Verificando archivos:");
+      console.log("[confirmación] companyLogoFile:", companyLogoFile ? `✅ ${companyLogoFile.name} (${companyLogoFile.size} bytes)` : "❌ null");
+      console.log("[confirmación] userAvatarFile:", userAvatarFile ? `✅ ${userAvatarFile.name} (${userAvatarFile.size} bytes)` : "❌ null");
+      
+      // 1. Crear FormData para enviar archivos
+      const formData = new FormData();
+      
+      // Agregar campos de texto
+      formData.append('razon_social', String(preparedRegistrationData.razon_social || ""));
+      formData.append('email_contacto', String(preparedRegistrationData.email_contacto || ""));
+      formData.append('nombre_comercial', String(preparedRegistrationData.nombre_comercial || ""));
+      formData.append('username', String(preparedRegistrationData.username || ""));
+      formData.append('password', String(preparedRegistrationData.password || ""));
+      formData.append('first_name', String(preparedRegistrationData.first_name || ""));
+      formData.append('last_name', String(preparedRegistrationData.last_name || ""));
+      formData.append('email', String(preparedRegistrationData.email || ""));
+      
+      // Agregar archivos de imágenes si existen
+      if (companyLogoFile) {
+        formData.append('imagen_empresa', companyLogoFile);
+        console.log("[confirmación] ✅ Logo empresa agregado al FormData:", companyLogoFile.name);
+      } else {
+        console.warn("[confirmación] ⚠️ NO hay logo de empresa para subir");
+      }
+      
+      if (userAvatarFile) {
+        formData.append('imagen_perfil', userAvatarFile);
+        console.log("[confirmación] ✅ Avatar usuario agregado al FormData:", userAvatarFile.name);
+      } else {
+        console.warn("[confirmación] ⚠️ NO hay avatar de usuario para subir");
+      }
 
-      // AÑADIR: Verificar que no hay campos vacíos problemáticos
-      console.log("[confirmación] Tipos verificados:", Object.keys(payload).map(k => `${k}: ${typeof payload[k as keyof typeof payload]}`));
-      console.log("[confirmación] Payload para crear empresa:", JSON.stringify(payload, null, 2));
+      console.log("[confirmación] 📦 FormData preparado. Contenido:");
+      for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`  - ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
+        } else {
+          console.log(`  - ${key}: ${value}`);
+        }
+      }
 
       // 2. CREAR EMPRESA Y USUARIO (aquí sí se ejecuta el registro)
-      const raw: BackendRegisterRaw = await registerCompanyAndUser(payload);
+      const raw: BackendRegisterRaw = await registerCompanyAndUser(formData);
       console.log("[confirmación] Respuesta del backend:", raw);
 
       // Normalizar respuesta: backend devuelve { message, empresa: { id } , ... }
@@ -673,76 +671,214 @@ const CompanyRegisterPage: React.FC = () => {
             <fieldset className="card" style={{ marginBottom: 16 }}>
               <legend>🏢 Datos de la Empresa</legend>
 
-              <div className="input-group">
-                <span className="input-icon">🏢</span>
-                <input type="text" name="nombre_comercial" placeholder="Nombre comercial *" value={form.nombre_comercial} onChange={handleChange} required />
-              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 20, alignItems: "start" }}>
+                {/* Columna izquierda: Datos */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div className="input-group">
+                    <span className="input-icon">🏢</span>
+                    <input type="text" name="nombre_comercial" placeholder="Nombre comercial *" value={form.nombre_comercial} onChange={handleChange} required />
+                  </div>
 
-              <div className="input-group">
-                <span className="input-icon">📄</span>
-                <input type="text" name="razon_social" placeholder="Razón social *" value={form.razon_social} onChange={handleChange} required />
-              </div>
+                  <div className="input-group">
+                    <span className="input-icon">📄</span>
+                    <input type="text" name="razon_social" placeholder="Razón social *" value={form.razon_social} onChange={handleChange} required />
+                  </div>
 
-              <div className="input-group">
-                <span className="input-icon">📧</span>
-                <input type="email" name="email_contacto" placeholder="Email de contacto *" value={form.email_contacto} onChange={handleChange} required />
-              </div>
+                  <div className="input-group">
+                    <span className="input-icon">📧</span>
+                    <input type="email" name="email_contacto" placeholder="Email de contacto *" value={form.email_contacto} onChange={handleChange} required />
+                  </div>
+                </div>
 
-              <div className="input-group" style={{ alignItems: "center", gap: 12 }}>
-                <label className="ghost-btn" style={{ display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
-                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, "company")} style={{ display: "none" }} />
-                  <span>{companyLogoPreview ? "Cambiar logo" : "Subir logo de la empresa"}</span>
-                </label>
-                {companyLogoPreview && (
-                  <img src={companyLogoPreview} alt="Logo empresa" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }} />
-                )}
+                {/* Columna derecha: Logo de empresa */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px" }}>
+                  <label 
+                    className="ghost-btn" 
+                    style={{ 
+                      display: "flex", 
+                      flexDirection: "column",
+                      gap: 12, 
+                      alignItems: "center", 
+                      cursor: "pointer",
+                      padding: "16px",
+                      border: "2px dashed rgba(255,255,255,0.1)",
+                      borderRadius: "12px",
+                      minWidth: "160px",
+                      transition: "all 0.3s ease"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+                  >
+                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, "company")} style={{ display: "none" }} />
+                    {companyLogoPreview ? (
+                      <>
+                        <img 
+                          src={companyLogoPreview} 
+                          alt="Logo empresa" 
+                          style={{ 
+                            width: 120, 
+                            height: 120, 
+                            objectFit: "cover", 
+                            borderRadius: 12, 
+                            border: "2px solid rgba(255,255,255,0.1)",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+                          }} 
+                        />
+                        <span style={{ fontSize: "12px", color: "var(--muted)" }}>Cambiar logo</span>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ 
+                          fontSize: "48px", 
+                          opacity: 0.5,
+                          marginBottom: "8px"
+                        }}>🏢</div>
+                        <span style={{ fontSize: "13px", textAlign: "center" }}>Subir logo<br/>de la empresa</span>
+                      </>
+                    )}
+                  </label>
+                </div>
               </div>
             </fieldset>
 
             <fieldset className="card" style={{ marginBottom: 16 }}>
               <legend>👤 Usuario Administrador</legend>
 
-              <div className="register-grid">
-                <div className="input-group">
-                  <span className="input-icon">👤</span>
-                  <input type="text" name="first_name" placeholder="Nombre *" value={form.first_name} onChange={handleChange} required />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 20, alignItems: "start" }}>
+                {/* Columna izquierda: Datos del usuario */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div className="register-grid">
+                    <div className="input-group">
+                      <span className="input-icon">👤</span>
+                      <input type="text" name="first_name" placeholder="Nombre *" value={form.first_name} onChange={handleChange} required />
+                    </div>
+
+                    <div className="input-group">
+                      <span className="input-icon">👤</span>
+                      <input type="text" name="last_name" placeholder="Apellido *" value={form.last_name} onChange={handleChange} required />
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <span className="input-icon">📧</span>
+                    <input 
+                      type="text" 
+                      name="email" 
+                      placeholder={form.nombre_comercial ? `usuario.${form.nombre_comercial.toLowerCase().trim().replace(/\s+/g, '')}@gmail.com` : "Email del administrador *"}
+                      value={form.email} 
+                      onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const nombreLimpio = form.nombre_comercial.toLowerCase().trim().replace(/\s+/g, '');
+                        
+                        if (!nombreLimpio) {
+                          // Si no hay nombre comercial, comportamiento normal
+                          setForm(prev => ({ ...prev, email: inputValue }));
+                          return;
+                        }
+                        
+                        const dominioFijo = `.${nombreLimpio}@gmail.com`;
+                        
+                        // Si el usuario intenta borrar o modificar el dominio, mantenerlo fijo
+                        if (inputValue.includes('.')) {
+                          // Extraer solo la parte antes del primer punto
+                          const parteUsuario = inputValue.split('.')[0];
+                          // Siempre mantener el dominio fijo
+                          setForm(prev => ({ ...prev, email: `${parteUsuario}${dominioFijo}` }));
+                        } else {
+                          // Si no hay punto aún, permitir escribir normalmente
+                          setForm(prev => ({ ...prev, email: inputValue }));
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // Al perder el foco, si hay algo escrito y nombre comercial, agregar el dominio
+                        const nombreLimpio = form.nombre_comercial.toLowerCase().trim().replace(/\s+/g, '');
+                        if (nombreLimpio && e.target.value && !e.target.value.includes('.')) {
+                          const dominioFijo = `.${nombreLimpio}@gmail.com`;
+                          setForm(prev => ({ ...prev, email: `${e.target.value}${dominioFijo}` }));
+                        }
+                      }}
+                      required 
+                    />
+                    {form.nombre_comercial && (
+                      <small style={{ fontSize: "11px", color: "var(--success)", marginTop: "4px", display: "block", fontWeight: "500" }}>
+                        💡 Escribe tu usuario (ej: vagner). Al terminar se agregará automáticamente .{form.nombre_comercial.toLowerCase().trim().replace(/\s+/g, '')}@gmail.com
+                      </small>
+                    )}
+                  </div>
+
+                  <div className="input-group">
+                    <span className="input-icon">🔑</span>
+                    <input 
+                      type="text" 
+                      name="username" 
+                      placeholder="Nombre de usuario *" 
+                      value={form.username} 
+                      onChange={handleChange} 
+                      autoComplete="off"
+                      required 
+                    />
+                  </div>
+
+                  <div className="register-grid">
+                    <div className="input-group">
+                      <span className="input-icon">🔒</span>
+                      <input type="password" name="password" placeholder="Contraseña *" value={form.password} onChange={handleChange} required />
+                    </div>
+
+                    <div className="input-group">
+                      <span className="input-icon">🔒</span>
+                      <input type="password" name="confirm_password" placeholder="Confirmar contraseña *" value={form.confirm_password} onChange={handleChange} required />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="input-group">
-                  <span className="input-icon">👤</span>
-                  <input type="text" name="last_name" placeholder="Apellido *" value={form.last_name} onChange={handleChange} required />
-                </div>
-              </div>
-
-              <div className="input-group">
-                <span className="input-icon">📧</span>
-                <input type="email" name="email" placeholder="Email del administrador *" value={form.email} onChange={handleChange} required />
-              </div>
-
-              <div className="input-group" style={{ alignItems: "center", gap: 12 }}>
-                <label className="ghost-btn" style={{ display: "inline-flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
-                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, "user")} style={{ display: "none" }} />
-                  <span>{userAvatarPreview ? "Cambiar foto" : "Subir foto de perfil"}</span>
-                </label>
-                {userAvatarPreview && (
-                  <img src={userAvatarPreview} alt="Avatar usuario" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 999, border: "1px solid rgba(255,255,255,0.06)" }} />
-                )}
-              </div>
-
-              <div className="input-group">
-                <span className="input-icon">🔑</span>
-                <input type="text" name="username" placeholder="Nombre de usuario *" value={form.username} onChange={handleChange} required />
-              </div>
-
-              <div className="register-grid" style={{ marginTop: 8 }}>
-                <div className="input-group">
-                  <span className="input-icon">🔒</span>
-                  <input type="password" name="password" placeholder="Contraseña *" value={form.password} onChange={handleChange} required />
-                </div>
-
-                <div className="input-group">
-                  <span className="input-icon">🔒</span>
-                  <input type="password" name="confirm_password" placeholder="Confirmar contraseña *" value={form.confirm_password} onChange={handleChange} required />
+                {/* Columna derecha: Foto de perfil */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px" }}>
+                  <label 
+                    className="ghost-btn" 
+                    style={{ 
+                      display: "flex", 
+                      flexDirection: "column",
+                      gap: 12, 
+                      alignItems: "center", 
+                      cursor: "pointer",
+                      padding: "16px",
+                      border: "2px dashed rgba(255,255,255,0.1)",
+                      borderRadius: "12px",
+                      minWidth: "160px",
+                      transition: "all 0.3s ease"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+                  >
+                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, "user")} style={{ display: "none" }} />
+                    {userAvatarPreview ? (
+                      <>
+                        <img 
+                          src={userAvatarPreview} 
+                          alt="Avatar usuario" 
+                          style={{ 
+                            width: 120, 
+                            height: 120, 
+                            objectFit: "cover", 
+                            borderRadius: "50%", 
+                            border: "2px solid rgba(255,255,255,0.1)",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+                          }} 
+                        />
+                        <span style={{ fontSize: "12px", color: "var(--muted)" }}>Cambiar foto</span>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ 
+                          fontSize: "48px", 
+                          opacity: 0.5,
+                          marginBottom: "8px"
+                        }}>👤</div>
+                        <span style={{ fontSize: "13px", textAlign: "center" }}>Subir foto<br/>de perfil</span>
+                      </>
+                    )}
+                  </label>
                 </div>
               </div>
             </fieldset>

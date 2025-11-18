@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../modules/auth/service';
 import { useLocation } from 'react-router-dom';
+import { getEmpresaById } from '../../modules/empresa/service';
 import './topbar.css';
 
 interface TopbarProps {
@@ -40,22 +41,54 @@ export const Topbar: React.FC<TopbarProps> = ({
   });
 
   useEffect(() => {
-    // Cargar datos de empresa desde localStorage o user
+    // Cargar datos de empresa desde la API
     const extendedUser = user as ExtendedUser;
-    const companyName = localStorage.getItem("ui.company.name") || 
-                       localStorage.getItem("ui.companyName") || 
-                       extendedUser?.empresa?.razon_social || 
-                       "Mi Empresa";
+    const empresaId = user?.empresa_id;
     
-    const companyLogo = localStorage.getItem("ui.company.logo") || 
-                       extendedUser?.empresa?.imagen_url_empresa || 
-                       "";
+    if (empresaId) {
+      // Cargar datos reales desde la API
+      getEmpresaById(empresaId)
+        .then((empresa) => {
+          if (empresa) {
+            console.log("[Topbar] Empresa cargada:", empresa);
+            // Manejar ambos formatos: Imagen_url (backend) e imagen_url
+            const logoUrl = (empresa as any).Imagen_url || (empresa as any).imagen_url || "";
+            console.log("[Topbar] Logo URL:", logoUrl);
+            setCompanyData({
+              name: empresa.nombre_comercial || empresa.razon_social,
+              logo: logoUrl,
+              subtitle: getSubtitleFromPath(location.pathname)
+            });
+          } else {
+            // Fallback si la API falla
+            useFallbackCompanyData();
+          }
+        })
+        .catch((err) => {
+          console.error("[Topbar] Error al cargar empresa:", err);
+          useFallbackCompanyData();
+        });
+    } else {
+      // Si no hay empresa_id, usar fallback
+      useFallbackCompanyData();
+    }
     
-    setCompanyData({
-      name: companyName,
-      logo: companyLogo,
-      subtitle: getSubtitleFromPath(location.pathname)
-    });
+    function useFallbackCompanyData() {
+      const companyName = localStorage.getItem("ui.company.name") || 
+                         localStorage.getItem("ui.companyName") || 
+                         extendedUser?.empresa?.razon_social || 
+                         "Mi Empresa";
+      
+      const companyLogo = localStorage.getItem("ui.company.logo") || 
+                         extendedUser?.empresa?.imagen_url_empresa || 
+                         "";
+      
+      setCompanyData({
+        name: companyName,
+        logo: companyLogo,
+        subtitle: getSubtitleFromPath(location.pathname)
+      });
+    }
   }, [user, location.pathname]);
 
   const getSubtitleFromPath = (pathname: string): string => {
@@ -102,7 +135,16 @@ export const Topbar: React.FC<TopbarProps> = ({
       <div className="topbar__company">
         <div className="topbar__logo topbar__interactive">
           {companyData.logo ? (
-            <img src={companyData.logo} alt={companyData.name} />
+            <img 
+              src={companyData.logo} 
+              alt={companyData.name}
+              onError={(e) => {
+                console.error("[Topbar] Error al cargar logo:", companyData.logo);
+                // Ocultar imagen y mostrar inicial
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement!.textContent = companyData.name.charAt(0);
+              }}
+            />
           ) : (
             companyData.name.charAt(0)
           )}
